@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aura & Arbor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Quicksand:wght@300;400;500&display=swap');
+        
+        :root {
+            --sanctuary-dark: #040d0b;
+            --emerald-glow: rgba(16, 185, 129, 0.4);
+            --aura-color: #10b981;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; 
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--sanctuary-dark);
+            color: #d1d5db;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Loading Screen */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--sanctuary-dark);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .meditator-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stickman {
+            width: 120px;
+            height: 180px;
+            z-index: 10;
+            transform-origin: center center;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .leg-left, .leg-right, .arm-left, .arm-right {
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: 50px 75px;
+        }
+
+        .stage-stand .leg-left { d: path("M50 75 L48 110 L48 140"); }
+        .stage-stand .leg-right { d: path("M50 75 L52 110 L52 140"); }
+        .stage-stand .stickman { 
+            transform: translateY(-40px);
+            animation: vertical-float 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes vertical-float {
+            from { transform: translateY(-40px); }
+            to { transform: translateY(-60px); }
+        }
+
+        .stage-release .stickman { transform: translateY(-50px); animation: none; }
+        .stage-release .leg-left { d: path("M50 75 L40 110 L35 140"); }
+        .stage-release .leg-right { d: path("M50 75 L60 110 L65 140"); }
+        .stage-release .arm-left { d: path("M50 48 L5 40"); }
+        .stage-release .arm-right { d: path("M50 48 L95 40"); }
+        
+        .final-aura {
+            position: absolute; width: 10px; height: 10px; background: var(--aura-color);
+            border-radius: 50%; filter: blur(20px); opacity: 0; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        .stage-release .final-aura { animation: aura-burst 2s ease-out forwards; }
+
+        @keyframes aura-burst {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(150); opacity: 0; }
+        }
+
+        /* UI Styles */
+        .texture-overlay { position: fixed; inset: 0; background-image: url("https://www.transparenttextures.com/patterns/asfalt-light.png"); opacity: 0.03; pointer-events: none; z-index: 100; }
+
+        .page-container { display: none; opacity: 0; height: 100vh; width: 100%; padding: 1.5rem; box-sizing: border-box; overflow: hidden; }
+        @media (min-width: 768px) { .page-container { padding: 2.5rem; } }
+        
+        .page-container.active { display: flex; flex-direction: column; opacity: 1; animation: focus-in 0.8s ease-out forwards; }
+
+        @keyframes focus-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        .serif-italic { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border-radius: 2rem; }
+
+        .nav-link { transition: all 0.4s ease; opacity: 0.2; position: relative; }
+        .nav-link.active { opacity: 1; color: #10b981; }
+        .nav-link.active::after { content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 2px; height: 12px; background: currentColor; box-shadow: 0 0 8px currentColor; }
+
+        .todo-container { flex: 1; display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%; min-height: 0; }
+        .todo-list-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; }
+        .todo-list-scroll::-webkit-scrollbar { display: none; }
+
+        .todo-item { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); gap: 1rem; }
+        .todo-item.done .todo-text { opacity: 0.3; text-decoration: line-through; }
+        .todo-text { outline: none; border-radius: 4px; padding: 2px 4px; transition: background 0.2s; }
+        .todo-text:focus { background: rgba(255,255,255,0.05); color: #10b981; }
+
+        .time-text { font-size: clamp(3rem, 12vh, 8rem); font-weight: 200; line-height: 1; outline: none; transition: color 0.3s; }
+        @media (min-width: 768px) { .time-text { font-size: clamp(4rem, 15vh, 10rem); } }
+        .time-text:focus { color: #10b981; }
+        
+        .toggle-tab { background: rgba(255,255,255,0.03); border-radius: 2rem; padding: 0.35rem; display: inline-flex; gap: 0.25rem; margin-bottom: 1.5rem; }
+        .tab-btn { padding: 0.5rem 1rem; border-radius: 1.5rem; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.3s; }
+        @media (min-width: 768px) { .tab-btn { padding: 0.5rem 1.5rem; font-size: 0.75rem; } }
+        .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="loading-overlay">
+        <div class="meditator-wrapper" id="meditator-wrapper">
+            <div class="final-aura"></div>
+            <svg class="stickman" id="loading-stickman" viewBox="0 0 100 150" fill="none">
+                <circle cx="50" cy="30" r="10" stroke="#10b981" stroke-width="2.5" />
+                <path d="M50 40 L50 75" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+                <path class="arm-left" d="M50 48 L35 65" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+                <path class="arm-right" d="M50 48 L65 65" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+                <path class="leg-left" d="M50 75 L30 85 L55 90" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+                <path class="leg-right" d="M50 75 L70 85 L45 90" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+        </div>
+        <div id="loading-text" class="serif-italic text-emerald-500/40 text-lg tracking-[0.4em] mt-4">Aura & Arbor</div>
+    </div>
+
+    <div class="texture-overlay"></div>
+
+    <nav class="fixed left-0 top-0 bottom-0 w-16 md:w-20 flex flex-col items-center justify-center gap-10 md:gap-14 z-50 border-r border-white/5 bg-[#040d0b]/80">
+        <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-link active">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        </button>
+        <button onclick="navigate('timer')" id="nav-timer" class="nav-link">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button onclick="navigate('intentions')" id="nav-intentions" class="nav-link">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        </button>
+    </nav>
+
+    <main class="ml-16 md:ml-20 h-full relative">
+        <section id="page-dashboard" class="page-container active items-center justify-center">
+            <div class="text-center mb-10 md:mb-16">
+                <h1 class="serif-italic text-5xl md:text-7xl text-slate-100 font-light mb-2 px-4">Aura & Arbor</h1>
+                <p class="text-emerald-500/30 tracking-[0.5em] uppercase text-[8px] md:text-[10px] font-bold">Focus Statistics</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 w-full max-w-4xl px-4 mb-20">
+                <div class="glass-panel p-6 md:p-10 text-center">
+                    <span class="text-3xl md:text-5xl font-extralight text-emerald-200" id="stat-completed">0</span>
+                    <p class="text-[9px] uppercase tracking-widest text-slate-500 mt-2">Sessions</p>
+                </div>
+                <div class="glass-panel p-6 md:p-10 text-center">
+                    <span class="text-3xl md:text-5xl font-extralight text-emerald-200" id="stat-minutes">0</span>
+                    <p class="text-[9px] uppercase tracking-widest text-slate-500 mt-2">Minutes</p>
+                </div>
+                <div class="glass-panel p-6 md:p-10 text-center">
+                    <span class="text-3xl md:text-5xl font-extralight text-emerald-200" id="stat-streak">1</span>
+                    <p class="text-[9px] uppercase tracking-widest text-slate-500 mt-2">Streak</p>
+                </div>
+            </div>
+            <!-- Credit Section -->
+            <footer class="absolute bottom-6 md:bottom-10 text-center w-full px-4 pointer-events-none">
+                <p class="text-[9px] md:text-[10px] text-white/10 uppercase tracking-[0.4em] font-medium italic">
+                    Crafted with intent by <span class="text-emerald-500/30">Naman Aggarwal</span>
+                </p>
+            </footer>
+        </section>
+
+        <section id="page-intentions" class="page-container">
+            <div class="todo-container">
+                <header class="mb-8 md:mb-12">
+                    <h2 class="serif-italic text-4xl md:text-5xl text-slate-100 mb-4">Intentions</h2>
+                    <div class="flex gap-4">
+                        <input type="text" id="todo-input" onkeydown="if(event.key === 'Enter') addTodo()" placeholder="What will you focus on?" class="flex-1 bg-white/5 border-b border-white/10 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-slate-200">
+                        <button onclick="addTodo()" class="text-emerald-500 text-[10px] md:text-xs uppercase tracking-widest font-bold px-4">Plant</button>
+                    </div>
+                </header>
+                <div class="todo-list-scroll px-2" id="todo-list"></div>
+                <p class="mt-8 text-[9px] md:text-[10px] text-center text-white/10 uppercase tracking-[0.2em]">Data saved to cloud • Click task text to edit</p>
+            </div>
+        </section>
+
+        <section id="page-timer" class="page-container items-center justify-center">
+            <div class="toggle-tab">
+                <button onclick="setTimerMode('pomodoro')" id="tab-pomo" class="tab-btn active">Pomodoro</button>
+                <button onclick="setTimerMode('stopwatch')" id="tab-stop" class="tab-btn">Stopwatch</button>
+            </div>
+
+            <div 
+                id="timer-display" 
+                class="serif-italic tracking-[0.1em] text-slate-100 time-text mb-8 md:mb-12"
+                contenteditable="true"
+                onblur="onTimerBlur()"
+                onkeydown="onTimerKeyDown(event)"
+                inputmode="numeric"
+            >25:00</div>
+            
+            <div class="flex gap-6 md:gap-10">
+                <button onclick="toggleMainTimer()" class="w-20 h-20 md:w-24 md:h-24 rounded-full border border-white/5 flex items-center justify-center hover:bg-emerald-500/5 transition-all">
+                    <svg id="play-icon" class="w-8 h-8 md:w-10 md:h-10 text-emerald-500/50" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pause-icon" class="w-8 h-8 md:w-10 md:h-10 hidden text-emerald-500/50" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button onclick="resetMainTimer()" class="w-20 h-20 md:w-24 md:h-24 rounded-full border border-white/5 flex items-center justify-center hover:bg-white/5 transition-all">
+                    <svg class="w-6 h-6 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+            </div>
+            
+            <p id="edit-hint" class="mt-4 text-[9px] md:text-[10px] text-white/10 uppercase tracking-widest text-center">Click time to edit minutes</p>
+        </section>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'aura-arbor-v1';
+
+        let stats = { completed: 0, minutes: 0, streak: 1 };
+        let todos = [];
+        let user = null;
+        
+        let timerMode = 'pomodoro'; 
+        let timerRunning = false;
+        let pSeconds = 25 * 60;
+        let pInitialSeconds = 25 * 60;
+        let sSeconds = 0;
+        let timerId = null;
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth failed:", err);
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                user = u;
+                initDataSync();
+                initSequence();
+            }
+        });
+
+        const initDataSync = () => {
+            if (!user) return;
+
+            const statsDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'main');
+            onSnapshot(statsDocRef, (snap) => {
+                if (snap.exists()) {
+                    stats = snap.data();
+                    updateDashboardStats();
+                }
+            }, (err) => {});
+
+            const todosDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', 'todoList');
+            onSnapshot(todosDocRef, (snap) => {
+                if (snap.exists()) {
+                    todos = snap.data().items || [];
+                    renderTodos();
+                }
+            }, (err) => {});
+        };
+
+        const saveStats = async () => {
+            if (!user) return;
+            const statsDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'main');
+            await setDoc(statsDocRef, stats);
+        };
+
+        const saveTodos = async () => {
+            if (!user) return;
+            const todosDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', 'todoList');
+            await setDoc(todosDocRef, { items: todos });
+        };
+
+        window.navigate = (section) => {
+            document.querySelectorAll('.page-container').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`page-${section}`).classList.add('active');
+            document.getElementById(`nav-${section}`).classList.add('active');
+            if(section === 'dashboard') updateDashboardStats();
+        };
+
+        window.setTimerMode = (mode) => {
+            if (timerRunning) resetMainTimer();
+            timerMode = mode;
+            const display = document.getElementById('timer-display');
+            const hint = document.getElementById('edit-hint');
+            
+            document.getElementById('tab-pomo').classList.toggle('active', mode === 'pomodoro');
+            document.getElementById('tab-stop').classList.toggle('active', mode === 'stopwatch');
+            
+            if (mode === 'stopwatch') {
+                display.contentEditable = "false";
+                hint.classList.add('opacity-0');
+                display.textContent = "00:00";
+            } else {
+                display.contentEditable = "true";
+                hint.classList.remove('opacity-0');
+                updateDisplay(); 
+            }
+        };
+
+        window.onTimerKeyDown = (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.target.blur();
+            }
+        };
+
+        window.onTimerBlur = () => {
+            if (timerMode !== 'pomodoro') return;
+            const display = document.getElementById('timer-display');
+            let text = display.innerText.trim().split(':')[0];
+            let val = parseInt(text);
+            
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 999) val = 999;
+            
+            pSeconds = val * 60;
+            pInitialSeconds = pSeconds;
+            updateDisplay();
+        };
+
+        window.toggleMainTimer = () => {
+            const play = document.getElementById('play-icon');
+            const pause = document.getElementById('pause-icon');
+            const display = document.getElementById('timer-display');
+            
+            if (timerRunning) {
+                clearInterval(timerId);
+                timerRunning = false;
+                play.classList.remove('hidden');
+                pause.classList.add('hidden');
+                if (timerMode === 'pomodoro') display.contentEditable = "true";
+            } else {
+                timerRunning = true;
+                play.classList.add('hidden');
+                pause.classList.remove('hidden');
+                display.contentEditable = "false";
+                
+                timerId = setInterval(() => {
+                    if (timerMode === 'pomodoro') {
+                        pSeconds--;
+                        if (pSeconds < 0) {
+                            stats.completed++;
+                            stats.minutes += Math.floor(pInitialSeconds / 60);
+                            pSeconds = pInitialSeconds;
+                            toggleMainTimer();
+                            saveStats();
+                        }
+                    } else {
+                        sSeconds++;
+                    }
+                    updateDisplay();
+                }, 1000);
+            }
+        };
+
+        window.resetMainTimer = () => {
+            if(timerRunning) toggleMainTimer();
+            if(timerMode === 'pomodoro') pSeconds = pInitialSeconds;
+            else sSeconds = 0;
+            updateDisplay();
+        };
+
+        function updateDisplay() {
+            const current = (timerMode === 'pomodoro') ? pSeconds : sSeconds;
+            const m = Math.floor(current / 60);
+            const s = current % 60;
+            const display = document.getElementById('timer-display');
+            if (display) {
+                display.textContent = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            }
+        }
+
+        function updateDashboardStats() {
+            document.getElementById('stat-completed').textContent = stats.completed;
+            document.getElementById('stat-minutes').textContent = stats.minutes;
+            document.getElementById('stat-streak').textContent = stats.streak;
+        }
+
+        window.addTodo = () => {
+            const input = document.getElementById('todo-input');
+            const val = input.value.trim();
+            if (!val) return;
+            todos.push({ id: Date.now(), text: val, done: false });
+            input.value = '';
+            renderTodos();
+            saveTodos();
+        };
+
+        window.toggleTodo = (id) => {
+            todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+            renderTodos();
+            saveTodos();
+        };
+
+        window.editTodoText = (id, newText) => {
+            const cleanText = newText.trim();
+            if(!cleanText) { renderTodos(); return; }
+            todos = todos.map(t => t.id === id ? { ...t, text: cleanText } : t);
+            saveTodos();
+        };
+
+        window.removeTodo = (id) => {
+            todos = todos.filter(t => t.id !== id);
+            renderTodos();
+            saveTodos();
+        };
+
+        function renderTodos() {
+            const container = document.getElementById('todo-list');
+            if (!container) return;
+            container.innerHTML = todos.length ? todos.map(t => `
+                <div class="todo-item ${t.done ? 'done' : ''}">
+                    <div class="flex items-center gap-4 flex-1 overflow-hidden">
+                        <div class="w-4 h-4 shrink-0 rounded-full border border-emerald-500/40 flex items-center justify-center cursor-pointer" onclick="toggleTodo(${t.id})">
+                            ${t.done ? '<div class="w-2 h-2 bg-emerald-500 rounded-full"></div>' : ''}
+                        </div>
+                        <span 
+                            class="todo-text text-slate-300 tracking-wide flex-1 cursor-text truncate md:whitespace-normal" 
+                            contenteditable="true" 
+                            onblur="editTodoText(${t.id}, this.innerText)"
+                            onkeydown="if(event.key === 'Enter'){ event.preventDefault(); this.blur(); }"
+                        >${t.text}</span>
+                    </div>
+                    <button onclick="removeTodo(${t.id})" class="shrink-0 text-[9px] text-white/10 hover:text-white/40 tracking-widest uppercase">Clear</button>
+                </div>
+            `).join('') : '<p class="text-slate-600 text-xs italic py-20 text-center tracking-widest">Your path is clear.</p>';
+        }
+
+        function initSequence() {
+            const wrapper = document.getElementById('meditator-wrapper');
+            const loader = document.getElementById('loading');
+            
+            setTimeout(() => {
+                if (wrapper) wrapper.classList.add('stage-stand');
+                setTimeout(() => {
+                    if (wrapper) {
+                        wrapper.classList.remove('stage-stand');
+                        wrapper.classList.add('stage-release');
+                    }
+                    setTimeout(() => {
+                        if (loader) {
+                            loader.style.opacity = '0';
+                            setTimeout(() => loader.remove(), 1500);
+                        }
+                    }, 2000);
+                }, 1800);
+            }, 800);
+        }
+
+        initAuth();
+    </script>
+</body>
+</html>
